@@ -16,32 +16,38 @@ A simple Django project for managing kitchen records.
 ## Setup
 
 1. Clone the project:
+
    ```bash
    git clone <your-repository-url>
    cd chefsTable
    ```
 
 2. Create and activate a virtual environment:
+
    ```bash
    python -m venv env
    ```
 
    On Windows:
+
    ```bash
    env\Scripts\activate
    ```
 
    On macOS/Linux:
+
    ```bash
    source env/bin/activate
    ```
 
 3. Install dependencies:
+
    ```bash
    pip install django
    ```
 
 4. Apply migrations:
+
    ```bash
    python manage.py migrate
    ```

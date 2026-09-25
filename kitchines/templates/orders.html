@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kitchen Orders</title>
+  </head>
+  <body>
+    <h3>Kitchen Orders</h3>
+    <p>
+      <a href="{% url 'create_kitchen_order' %}">Add order</a> |
+      <a href="{% url 'home' %}">Back to dashboard</a>
+    </p>
+
+    {% if orders %}
+    <table border="1" cellpadding="8" cellspacing="0">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Item</th>
+          <th>Kitchen</th>
+          <th>Quantity</th>
+          <th>Status</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in orders %}
+        <tr>
+          <td>{{ order.customer_name }}</td>
+          <td>{{ order.item_name }}</td>
+          <td>{{ order.kitchen.name }}</td>
+          <td>{{ order.quantity }}</td>
+          <td>{{ order.status }}</td>
+          <td>{{ order.created_at|date:'Y-m-d H:i' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p>No orders found.</p>
+    {% endif %}
+  </body>
+</html>

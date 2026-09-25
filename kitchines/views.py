@@ -1,9 +1,27 @@
-from django.shortcuts import render
-from .models import Kitchen
+from django.shortcuts import redirect, render
+
+from .forms import KitchenOrderForm
+from .models import Kitchen, KitchenOrder
 
 
-# Create your views here.
+def kitchens(request):
+    kitchens = Kitchen.objects.all()
+    recent_orders = KitchenOrder.objects.select_related('kitchen').order_by('-created_at')[:10]
+    return render(request, 'member.html', {'kitchens': kitchens, 'orders': recent_orders})
+
+
+def kitchen_orders(request):
+    orders = KitchenOrder.objects.select_related('kitchen').order_by('-created_at')
+    return render(request, 'orders.html', {'orders': orders})
+
+
+def create_kitchen_order(request):
+    form = KitchenOrderForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        return redirect('kitchen_orders')
+    return render(request, 'order_form.html', {'form': form})
+
 
 def restaurants(request):
-    kitchen_members = Kitchen.objects.all().values()
-    return render(request, 'member.html',{'kitchen_members': kitchen_members})
+    return kitchens(request)

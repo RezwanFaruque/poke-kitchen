@@ -3,16 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>Kitchen Dashboard</title>
   </head>
   <body>
-    <h3>Hello Check world!</h3>
-    <p>Welcome to from html and template!</p>
-    {% for kitchen in kitchen_members %}
-      <h4>{{ kitchen.name }}</h4>
-      <p>{{ kitchen.member }}</p>
-    {% empty %}
-      <p>No kitchen records found.</p>
-    {% endfor %}
+    <h3>Kitchen Dashboard</h3>
+    <p>Track kitchen details and recent orders.</p>
+
+    <p><a href="{% url 'create_kitchen_order' %}">Create new order</a></p>
+    <p><a href="{% url 'kitchen_orders' %}">View all orders</a></p>
+
+    <h4>Kitchen List</h4>
+    {% if kitchens %}
+    <ul>
+      {% for kitchen in kitchens %}
+      <li>
+        <strong>{{ kitchen.name }}</strong> - Members: {{ kitchen.member }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p>No kitchens available.</p>
+    {% endif %}
+
+    <h4>Recent Orders</h4>
+    {% if orders %}
+    <ul>
+      {% for order in orders %}
+      <li>
+        {{ order.customer_name }} ordered {{ order.item_name }} ({{
+        order.quantity }}) from {{ order.kitchen.name }} - {{ order.status }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p>No orders yet.</p>
+    {% endif %}
   </body>
 </html>
