@@ -1,42 +1,88 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kitchen Dashboard</title>
-  </head>
-  <body>
-    <h3>Kitchen Dashboard</h3>
-    <p>Track kitchen details and recent orders.</p>
+{% extends 'base.html' %} 
+{% block title %} Kitchen Dashboard | Chef's Table {%endblock %} 
+{% block content %}
+<div
+  class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-end gap-3 mb-4"
+>
+  <div>
+    <p class="text-uppercase small fw-bold text-success mb-2">Overview</p>
+    <h1 class="page-title mb-2">Kitchen dashboard</h1>
+    <p class="page-subtitle mb-0">
+      A clear view of your kitchens and latest orders.
+    </p>
+  </div>
+  <a class="btn btn-success px-3" href="{% url 'create_kitchen_order' %}"
+    >Create order</a
+  >
+</div>
 
-    <p><a href="{% url 'create_kitchen_order' %}">Create new order</a></p>
-    <p><a href="{% url 'kitchen_orders' %}">View all orders</a></p>
+<div class="row g-4">
+  <section class="col-lg-4">
+    <div class="surface h-100 p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="section-title mb-0">Kitchens</h2>
+        <span class="badge rounded-pill text-bg-light"
+          >{{ kitchens|length }}</span
+        >
+      </div>
+      {% if kitchens %}
+      <div class="list-group list-group-flush">
+        {% for kitchen in kitchens %}
+        <div class="list-group-item px-0 py-3">
+          <div class="fw-semibold">{{ kitchen.name }}</div>
+          <div class="small text-muted-custom mt-1">
+            Members: {{ kitchen.member }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="py-4 text-center text-muted-custom">
+        No kitchens available yet.
+      </div>
+      {% endif %}
+    </div>
+  </section>
 
-    <h4>Kitchen List</h4>
-    {% if kitchens %}
-    <ul>
-      {% for kitchen in kitchens %}
-      <li>
-        <strong>{{ kitchen.name }}</strong> - Members: {{ kitchen.member }}
-      </li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <p>No kitchens available.</p>
-    {% endif %}
-
-    <h4>Recent Orders</h4>
-    {% if orders %}
-    <ul>
-      {% for order in orders %}
-      <li>
-        {{ order.customer_name }} ordered {{ order.item_name }} ({{
-        order.quantity }}) from {{ order.kitchen.name }} - {{ order.status }}
-      </li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <p>No orders yet.</p>
-    {% endif %}
-  </body>
-</html>
+  <section class="col-lg-8">
+    <div class="surface h-100 p-4">
+      <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+        <h2 class="section-title mb-0">Recent orders</h2>
+        <a
+          class="small fw-semibold text-success text-decoration-none"
+          href="{% url 'kitchen_orders' %}"
+          >View all</a
+        >
+      </div>
+      {% if orders %}
+      <div class="list-group list-group-flush">
+        {% for order in orders %}
+        <div
+          class="list-group-item px-0 py-3 d-flex flex-column flex-sm-row justify-content-between gap-2"
+        >
+          <div>
+            <div class="fw-semibold">
+              {{ order.item_name }}
+              <span class="text-muted-custom fw-normal"
+                >&times; {{ order.quantity }}</span
+              >
+            </div>
+            <div class="small text-muted-custom mt-1">
+              {{ order.customer_name }} · {{ order.kitchen.name }}
+            </div>
+          </div>
+          <span class="badge status-badge align-self-start"
+            >{{ order.status|title }}</span
+          >
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="py-4 text-center text-muted-custom">
+        No orders yet. Create your first order to get started.
+      </div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

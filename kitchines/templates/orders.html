@@ -1,44 +1,97 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kitchen Orders</title>
-  </head>
-  <body>
-    <h3>Kitchen Orders</h3>
-    <p>
-      <a href="{% url 'create_kitchen_order' %}">Add order</a> |
-      <a href="{% url 'home' %}">Back to dashboard</a>
+{% extends 'base.html' %}
+{% block title %}Kitchen Orders{% endblock %}
+{% block content %}
+<div
+  class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-end gap-3 mb-4"
+>
+  <div>
+    <p class="text-uppercase small fw-bold text-success mb-2">Kitchen</p>
+    <h1 class="page-title mb-2">Orders</h1>
+    <p class="page-subtitle mb-0">
+      Review customer orders across your kitchens.
     </p>
+  </div>
+  <a class="btn btn-success px-3" href="{% url 'create_kitchen_order' %}"
+    >Add order</a
+  >
+</div>
 
-    {% if orders %}
-    <table border="1" cellpadding="8" cellspacing="0">
+<div class="surface overflow-hidden">
+  {% if orders %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
       <thead>
         <tr>
-          <th>Customer</th>
-          <th>Item</th>
-          <th>Kitchen</th>
-          <th>Quantity</th>
-          <th>Status</th>
-          <th>Created</th>
+          <th scope="col">Customer</th>
+          <th scope="col">Item</th>
+          <th scope="col">Kitchen</th>
+          <th scope="col">Qty</th>
+          <th scope="col">Status</th>
+          <th scope="col">Created</th>
         </tr>
       </thead>
       <tbody>
         {% for order in orders %}
         <tr>
-          <td>{{ order.customer_name }}</td>
-          <td>{{ order.item_name }}</td>
+          <td class="fw-semibold">{{ order.customer_name }}</td>
+          <td>
+            <a
+              class="fw-semibold text-success text-decoration-none"
+              href="{% url 'view_kitchen_order' order.pk %}"
+              >{{ order.item_name }}</a
+            >
+          </td>
           <td>{{ order.kitchen.name }}</td>
           <td>{{ order.quantity }}</td>
-          <td>{{ order.status }}</td>
-          <td>{{ order.created_at|date:'Y-m-d H:i' }}</td>
+          <td>
+            <form
+              class="d-flex align-items-center gap-2"
+              method="post"
+              action="{% url 'update_order_status' order.pk %}"
+            >
+              {% csrf_token %}
+              <label class="visually-hidden" for="status-{{ order.pk }}">
+                Status for {{ order.item_name }}
+              </label>
+              <select
+                class="form-select form-select-sm"
+                id="status-{{ order.pk }}"
+                name="status"
+              >
+                {% for value, label in status_choices %} 
+                  {% if order.status == value %}
+                    <option value="{{ value }}" selected>{{ label }}</option>
+                  {% else %}
+                    <option value="{{ value }}">{{ label }}</option>
+                  {% endif %} 
+                {% endfor %}
+              </select>
+              <button
+                class="btn btn-sm btn-outline-success text-nowrap"
+                type="submit"
+              >
+                Save
+              </button>
+            </form>
+          </td>
+          <td class="text-nowrap text-muted-custom">
+            {{ order.created_at|date:'M j, Y · H:i' }}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-    {% else %}
-    <p>No orders found.</p>
-    {% endif %}
-  </body>
-</html>
+  </div>
+  {% else %}
+  <div class="p-5 text-center">
+    <h2 class="section-title">No orders yet</h2>
+    <p class="page-subtitle mb-3">
+      New orders will appear here as soon as they are created.
+    </p>
+    <a class="btn btn-success" href="{% url 'create_kitchen_order' %}"
+      >Create an order</a
+    >
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

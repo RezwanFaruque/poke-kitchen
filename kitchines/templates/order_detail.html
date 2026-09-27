@@ -1,0 +1,52 @@
+{% extends 'base.html' %} 
+{% block title %}Order Details{% endblock %} 
+{% block content %}
+<div class="mb-4">
+  <a
+    class="small fw-semibold text-success text-decoration-none"
+    href="{% url 'kitchen_orders' %}"
+    >&larr; Back to orders</a
+  >
+</div>
+
+<div
+  class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-end gap-3 mb-4"
+>
+  <div>
+    <p class="text-uppercase small fw-bold text-success mb-2">Order details</p>
+    <h1 class="page-title mb-2">{{ order.item_name }}</h1>
+    <p class="page-subtitle mb-0">
+      Order #{{ order.pk }} for {{ order.customer_name }}
+    </p>
+  </div>
+  <span class="badge status-badge fs-6">{{ order.get_status_display }}</span>
+</div>
+
+<section class="surface p-4 p-md-5" aria-label="Order information">
+  <dl class="row mb-0">
+    <dt class="col-sm-4 col-lg-3 text-muted-custom mb-1">Customer</dt>
+    <dd class="col-sm-8 col-lg-9 mb-4">{{ order.customer_name }}</dd>
+
+    <dt class="col-sm-4 col-lg-3 text-muted-custom mb-1">Kitchen</dt>
+    <dd class="col-sm-8 col-lg-9 mb-4">{{ order.kitchen.name }}</dd>
+
+    <dt class="col-sm-4 col-lg-3 text-muted-custom mb-1">Quantity</dt>
+    <dd class="col-sm-8 col-lg-9 mb-4">{{ order.quantity }}</dd>
+
+    <dt class="col-sm-4 col-lg-3 text-muted-custom mb-1">Notes</dt>
+    <dd class="col-sm-8 col-lg-9 mb-4">
+      {{ order.notes|default:'No notes'|linebreaksbr }}
+    </dd>
+
+    <dt class="col-sm-4 col-lg-3 text-muted-custom mb-1">Created</dt>
+    <dd class="col-sm-8 col-lg-9 mb-4">
+      {{ order.created_at|date:'M j, Y · H:i' }}
+    </dd>
+
+    <dt class="col-sm-4 col-lg-3 text-muted-custom mb-1">Last updated</dt>
+    <dd class="col-sm-8 col-lg-9 mb-0">
+      {{ order.updated_at|date:'M j, Y · H:i' }}
+    </dd>
+  </dl>
+</section>
+{% endblock %}
