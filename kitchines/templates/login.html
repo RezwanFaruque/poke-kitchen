@@ -1,0 +1,33 @@
+{% extends 'base.html' %} {% block title %}Log in | Chef's Table{% endblock %}
+{% block content %}
+<div class="mb-4">
+  <p class="text-uppercase small fw-bold text-success mb-2">Welcome back</p>
+  <h1 class="page-title mb-2">Log in</h1>
+  <p class="page-subtitle mb-0">Use your email address and password.</p>
+</div>
+
+<div class="surface p-4 p-md-5" style="max-width: 520px">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}" />
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %} {% for field in form %} {% if field.name != 'next' %}
+    <div class="mb-3">
+      <label class="form-label" for="{{ field.id_for_label }}"
+        >{{ field.label }}</label
+      >
+      {{ field }} {% for error in field.errors %}
+      <div class="invalid-feedback d-block">{{ error }}</div>
+      {% endfor %}
+    </div>
+    {% endif %} {% endfor %}
+    <button class="btn btn-success px-4" type="submit">Log in</button>
+  </form>
+  <p class="mb-0 mt-4 text-muted-custom">
+    New to Chef's Table? <a href="{% url 'register' %}">Create an account</a>
+  </p>
+</div>
+{% endblock %}

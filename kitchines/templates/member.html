@@ -71,9 +71,20 @@
               {{ order.customer_name }} · {{ order.kitchen.name }}
             </div>
           </div>
-          <span class="badge status-badge align-self-start"
-            >{{ order.status|title }}</span
-          >
+          <div class="d-flex align-items-start gap-2">
+            <span class="badge status-badge">{{ order.status|title }}</span>
+            <form
+              method="post"
+              action="{% url 'delete_kitchen_order' order.pk %}"
+              onsubmit="return confirm('Delete this order for {{ order.customer_name|escapejs }}?');"
+            >
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.path }}" />
+              <button class="btn btn-sm btn-outline-danger" type="submit">
+                Delete
+              </button>
+            </form>
+          </div>
         </div>
         {% endfor %}
       </div>

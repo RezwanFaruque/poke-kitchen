@@ -1,6 +1,4 @@
-{% extends 'base.html' %}
-{% block title %}Kitchen Orders{% endblock %}
-{% block content %}
+{% extends 'base.html' %} {% block title %}Kitchen Orders{% endblock %} {% block content %}
 <div
   class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-end gap-3 mb-4"
 >
@@ -58,12 +56,12 @@
                 id="status-{{ order.pk }}"
                 name="status"
               >
-                {% for value, label in status_choices %} 
-                  {% if order.status == value %}
-                    <option value="{{ value }}" selected>{{ label }}</option>
-                  {% else %}
-                    <option value="{{ value }}">{{ label }}</option>
-                  {% endif %} 
+                {% for value, label in status_choices %}
+                {% if order.status == value %}
+                <option value="{{ value }}" selected>{{ label }}</option>
+                {% else %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endif %}
                 {% endfor %}
               </select>
               <button
