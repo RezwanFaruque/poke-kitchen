@@ -1,6 +1,5 @@
-{% extends 'base.html' %} 
-{% block title %} Create Order | Chef's Table {%endblock %} 
-{% block content %}
+{% extends 'base.html' %} {% block title %} Create Order | Chef's Table
+{%endblock %} {% block content %}
 <div class="mb-4">
   <p class="text-uppercase small fw-bold text-success mb-2">New order</p>
   <h1 class="page-title mb-2">Create kitchen order</h1>
@@ -28,6 +27,23 @@
       </div>
       {% endfor %}
     </div>
+    <section class="mt-4 p-3 border rounded-2 bg-light" aria-live="polite">
+      <div class="fw-semibold mb-1">Order suggestion</div>
+      <p id="suggestion-message" class="small text-muted mb-2">
+        Choose a kitchen and enter an item to get a suggestion from your order
+        history.
+      </p>
+      <div id="suggestion-result" class="d-none">
+        <p id="suggestion-details" class="mb-2"></p>
+        <button
+          id="apply-suggestion"
+          class="btn btn-sm btn-outline-success"
+          type="button"
+        >
+          Use suggestion
+        </button>
+      </div>
+    </section>
     <div
       class="d-flex flex-column-reverse flex-sm-row justify-content-end gap-2 mt-4"
     >
@@ -38,4 +54,83 @@
     </div>
   </form>
 </div>
+<script>
+  (() => {
+    const kitchen = document.getElementById("id_kitchen");
+    const item = document.getElementById("id_item_name");
+    const quantity = document.getElementById("id_quantity");
+    const notes = document.getElementById("id_notes");
+    const message = document.getElementById("suggestion-message");
+    const result = document.getElementById("suggestion-result");
+    const details = document.getElementById("suggestion-details");
+    const apply = document.getElementById("apply-suggestion");
+    let timer;
+    let controller;
+    let currentSuggestion;
+
+    const requestSuggestion = async () => {
+      if (controller) controller.abort();
+      if (!kitchen.value || (!item.value.trim() && !notes.value.trim())) {
+        currentSuggestion = null;
+        result.classList.add("d-none");
+        message.textContent =
+          "Choose a kitchen and enter an item to get a suggestion from your order history.";
+        return;
+      }
+      controller = new AbortController();
+      message.textContent = "Looking at your previous orders...";
+      result.classList.add("d-none");
+      const body = new URLSearchParams({
+        kitchen_id: kitchen.value,
+        item_name: item.value,
+        notes: notes.value,
+      });
+      try {
+        const response = await fetch('{% url "order_suggestions" %}', {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+              .value,
+          },
+          body,
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          message.textContent =
+            data.message || "Suggestions are unavailable right now.";
+          return;
+        }
+        currentSuggestion = data.suggestion;
+        if (!currentSuggestion) {
+          message.textContent = `${data.message || "No suggestion available."} You can still save this order.`;
+          return;
+        }
+        details.textContent = `${currentSuggestion.item_name} · Qty ${currentSuggestion.quantity}${currentSuggestion.notes ? ` · ${currentSuggestion.notes}` : ""}`;
+        result.classList.remove("d-none");
+        message.textContent = "Based on similar orders in this kitchen.";
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          message.textContent =
+            "Suggestions are unavailable right now. You can still save this order.";
+        }
+      }
+    };
+
+    [item, notes].forEach((field) =>
+      field.addEventListener("input", () => {
+        clearTimeout(timer);
+        timer = setTimeout(requestSuggestion, 600);
+      }),
+    );
+    kitchen.addEventListener("change", requestSuggestion);
+    apply.addEventListener("click", () => {
+      if (!currentSuggestion) return;
+      item.value = currentSuggestion.item_name;
+      quantity.value = currentSuggestion.quantity;
+      notes.value = currentSuggestion.notes;
+    });
+  })();
+</script>
 {% endblock %}

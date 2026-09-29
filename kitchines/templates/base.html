@@ -8,6 +8,10 @@
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
     />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+      rel="stylesheet"
+    />
     <style>
       :root {
         --ink: #26332d;
@@ -26,25 +30,64 @@
       }
 
       .topbar {
-        background: #fff;
+        position: relative;
+        z-index: 10;
+        background: rgb(255 255 255 / 96%);
         border-bottom: 1px solid var(--line);
       }
 
+      .navbar-inner {
+        min-height: 76px;
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+
       .brand-mark {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.65rem;
         color: var(--leaf-dark);
         font-size: 1.15rem;
         font-weight: 800;
         letter-spacing: 0;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .brand-logo {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 8px;
+        background: var(--leaf-dark);
+        color: #e0edaa;
+        font-size: 1.15rem;
       }
 
       .nav-link {
         color: var(--muted);
         font-weight: 600;
+        font-size: 0.92rem;
       }
 
       .nav-link:hover,
       .nav-link.active {
         color: var(--leaf-dark);
+      }
+
+      .nav-link.active {
+        background: #eef4ed;
+        border-radius: 6px;
+      }
+
+      .navbar-toggler {
+        border-color: var(--line);
+        padding: 0.45rem 0.6rem;
+      }
+
+      .navbar-toggler:focus {
+        box-shadow: 0 0 0 0.18rem rgb(40 99 77 / 18%);
       }
 
       .page-shell {
@@ -131,26 +174,63 @@
     {% block extra_head %}{% endblock %}
   </head>
   <body>
-    <nav class="topbar navbar navbar-expand-sm">
-      <div class="container page-shell py-0">
-        <a class="navbar-brand brand-mark" href="{% url 'home' %}"
-          >Chef's Table</a
+    <nav class="topbar navbar navbar-expand-md" aria-label="Main navigation">
+      <div class="container page-shell navbar-inner py-0">
+        <a class="navbar-brand brand-mark" href="{% url 'home' %}">
+          <span class="brand-logo" aria-hidden="true"
+            ><i class="bi bi-egg-fried"></i
+          ></span>
+          <span>Chef's Table</span>
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#primaryNavigation"
+          aria-controls="primaryNavigation"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
         >
-        <div class="navbar-nav ms-auto flex-row gap-3">
-          <a class="nav-link" href="{% url 'home' %}">Dashboard</a>
-          <a class="nav-link" href="{% url 'kitchen_orders' %}">Orders</a>
-          {% if user.is_authenticated %}
-          <span class="nav-link">{{ user.email }}</span>
-          <form class="d-flex" method="post" action="{% url 'logout' %}">
-            {% csrf_token %}
-            <button class="nav-link border-0 bg-transparent" type="submit">
-              Log out
-            </button>
-          </form>
-          {% else %}
-          <a class="nav-link" href="{% url 'login' %}">Log in</a>
-          <a class="nav-link" href="{% url 'register' %}">Register</a>
-          {% endif %}
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="primaryNavigation">
+          <div
+            class="navbar-nav ms-auto align-items-md-center gap-md-2 py-3 py-md-0"
+          >
+            <a
+              class="nav-link px-3{% if request.resolver_match.url_name == 'home' %} active{% endif %}"
+              href="{% url 'home' %}"
+              ><i class="bi bi-grid-1x2 me-1" aria-hidden="true"></i
+              >Dashboard</a
+            >
+            <a
+              class="nav-link px-3{% if request.resolver_match.url_name == 'kitchen_orders' %} active{% endif %}"
+              href="{% url 'kitchen_orders' %}"
+              ><i class="bi bi-receipt me-1" aria-hidden="true"></i>Orders</a
+            >
+            {% if user.is_authenticated %}
+            <span class="nav-link px-3 text-truncate">{{ user.email }}</span>
+            <form method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button
+                class="nav-link border-0 bg-transparent px-3"
+                type="submit"
+              >
+                <i class="bi bi-box-arrow-right me-1" aria-hidden="true"></i>
+                <span>Log out</span>
+              </button>
+            </form>
+            {% else %}
+            <a class="nav-link px-3" href="{% url 'login' %}"
+              ><i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i
+              >Log in</a
+            >
+            <a class="nav-link px-3" href="{% url 'register' %}"
+              ><i class="bi bi-person-plus me-1" aria-hidden="true"></i
+              >Register</a
+            >
+            {% endif %}
+          </div>
         </div>
       </div>
     </nav>

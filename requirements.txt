@@ -1,2 +1,2 @@
 Django>=5.2,<6
-numpy>=1.22
+langchain-groq>=0.3,<1

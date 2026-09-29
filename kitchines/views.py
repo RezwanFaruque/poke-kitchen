@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseBadRequest
+from django.conf import settings
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -9,6 +10,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 
 from .forms import EmailAuthenticationForm, KitchenOrderForm, RegistrationForm
 from .models import Kitchen, KitchenOrder
+from .suggestions import generate_order_suggestion
 
 
 def kitchens(request):
@@ -79,6 +81,25 @@ def create_kitchen_order(request):
         form.save_m2m()
         return redirect('kitchen_orders')
     return render(request, 'order_form.html', {'form': form})
+
+
+@login_required
+@require_POST
+def order_suggestions(request):
+    item_name = request.POST.get('item_name', '').strip()
+    notes = request.POST.get('notes', '').strip()
+    kitchen_id = request.POST.get('kitchen_id', '').strip()
+    if not (item_name or notes) or not kitchen_id.isdigit():
+        return JsonResponse({'suggestion': None}, status=400)
+    kitchen = get_object_or_404(Kitchen, pk=kitchen_id)
+    query = f'Kitchen: {kitchen.name}. Item: {item_name}. Notes: {notes}'[:1000]
+    suggestion = generate_order_suggestion(query, request.user.pk, kitchen.pk)
+    return JsonResponse(
+        {
+            'suggestion': suggestion,
+            'message': '' if suggestion else 'No past orders found for your account in this kitchen yet.',
+        },
+    )
 
 
 def restaurants(request):

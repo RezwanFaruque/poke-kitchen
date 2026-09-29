@@ -1,12 +1,11 @@
-from pathlib import Path
-from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .models import Kitchen, KitchenOrder
-from .vectorstore import query_orders, reset_vector_store
+from .suggestions import generate_order_suggestion, retrieve_order_history
 
 
 class AuthenticationTests(TestCase):
@@ -101,6 +100,9 @@ class RestaurantsUrlTests(TestCase):
     def test_homepage_loads(self):
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Dashboard')
+        self.assertContains(response, 'Orders')
+        self.assertContains(response, 'Log out')
 
     def test_restaurants_page_loads(self):
         response = self.client.get(reverse('restaurants'))
@@ -189,6 +191,55 @@ class RestaurantsUrlTests(TestCase):
         order = KitchenOrder.objects.get(customer_name='Alice')
         self.assertEqual(order.created_by, self.user)
 
+    def test_create_order_form_renders_suggestion_controls(self):
+        response = self.client.get(reverse('create_kitchen_order'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Order suggestion')
+        self.assertContains(response, 'Use suggestion')
+
+    def test_anonymous_order_page_redirects_to_project_login(self):
+        self.client.logout()
+
+        response = self.client.get(reverse('create_kitchen_order'))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.url,
+            f'{reverse("login")}?next={reverse("create_kitchen_order")}',
+        )
+
+    @patch('kitchines.views.generate_order_suggestion')
+    @override_settings(GROQ_API_KEY='test-key')
+    def test_order_suggestion_uses_current_user_and_selected_kitchen(self, suggest):
+        kitchen = Kitchen.objects.create(name='Main Kitchen', member=3)
+        suggest.return_value = {'item_name': 'Mushroom risotto', 'quantity': 2, 'notes': 'No garlic'}
+
+        response = self.client.post(
+            reverse('order_suggestions'),
+            {'kitchen_id': kitchen.pk, 'item_name': 'risotto', 'notes': 'no garlic'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['suggestion']['item_name'], 'Mushroom risotto')
+        suggest.assert_called_once_with(
+            'Kitchen: Main Kitchen. Item: risotto. Notes: no garlic',
+            self.user.pk,
+            kitchen.pk,
+        )
+
+    @override_settings(GROQ_API_KEY='')
+    def test_order_suggestion_reports_missing_groq_key(self):
+        kitchen = Kitchen.objects.create(name='Main Kitchen', member=3)
+
+        response = self.client.post(
+            reverse('order_suggestions'),
+            {'kitchen_id': kitchen.pk, 'item_name': 'Soup', 'notes': ''},
+        )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertIn('GROQ_API_KEY', response.json()['message'])
+
     def test_order_status_can_be_updated(self):
         kitchen = Kitchen.objects.create(name='Main Kitchen', member=3)
         order = KitchenOrder.objects.create(
@@ -248,43 +299,101 @@ class RestaurantsUrlTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
-class OrderVectorStoreTests(TestCase):
+class OrderSuggestionTests(TestCase):
     def setUp(self):
-        self._tmpdir = TemporaryDirectory()
-        self.addCleanup(self._tmpdir.cleanup)
-        self.addCleanup(reset_vector_store)
-        chroma_dir = Path(self._tmpdir.name)
-        settings_override = override_settings(
-            VECTOR_STORE_ENABLED=True,
-            VECTOR_STORE_DIR=chroma_dir,
-        )
-        settings_override.enable()
-        self.addCleanup(settings_override.disable)
-        reset_vector_store()
-
         self.kitchen = Kitchen.objects.create(name='Main Kitchen', member=3)
+        self.user = get_user_model().objects.create_user(username='chef@example.com')
 
-    def test_created_order_is_stored_in_vector_db(self):
+    def test_history_is_scoped_to_current_user_and_kitchen(self):
+        other_user = get_user_model().objects.create_user(username='other@example.com')
+        other_kitchen = Kitchen.objects.create(name='Other Kitchen')
         KitchenOrder.objects.create(
             kitchen=self.kitchen,
             customer_name='Alice',
             item_name='Mushroom risotto',
-            quantity=2,
-            notes='No garlic',
+            created_by=self.user,
         )
-
-        matches = query_orders('risotto without garlic', n_results=3)
-
-        self.assertEqual(len(matches), 1)
-        self.assertIn('Mushroom risotto', matches[0]['document'])
-        self.assertEqual(matches[0]['metadata']['customer_name'], 'Alice')
-
-    def test_deleted_order_is_removed_from_vector_db(self):
-        order = KitchenOrder.objects.create(
+        KitchenOrder.objects.create(
             kitchen=self.kitchen,
             customer_name='Bob',
             item_name='Soup',
+            created_by=other_user,
         )
-        order.delete()
+        KitchenOrder.objects.create(
+            kitchen=other_kitchen,
+            customer_name='Carol',
+            item_name='Pasta',
+            created_by=self.user,
+        )
 
-        self.assertEqual(query_orders('soup', n_results=3), [])
+        history = retrieve_order_history(self.user.pk, self.kitchen.pk)
+
+        self.assertEqual(history, [{'item_name': 'Mushroom risotto', 'quantity': 1, 'notes': ''}])
+
+    @patch('kitchines.suggestions._suggestion_chain')
+    @override_settings(GROQ_API_KEY='test-key')
+    def test_suggestion_passes_retrieved_order_context_to_langchain(self, chain_factory):
+        KitchenOrder.objects.create(
+            kitchen=self.kitchen,
+            customer_name='Private customer',
+            item_name='Mushroom risotto',
+            quantity=2,
+            notes='No garlic',
+            created_by=self.user,
+        )
+        generated_order = {'item_name': 'Mushroom risotto', 'quantity': 2, 'notes': 'No garlic'}
+        chain_factory.return_value.invoke.return_value = generated_order
+
+        suggestion = generate_order_suggestion('risotto without garlic', self.user.pk, self.kitchen.pk)
+
+        self.assertEqual(suggestion, generated_order)
+        chain_factory.assert_called_once_with('test-key', 'openai/gpt-oss-20b')
+        chain_factory.return_value.invoke.assert_called_once_with(
+            {
+                'query': 'risotto without garlic',
+                'history': '[{"item_name": "Mushroom risotto", "quantity": 2, "notes": "No garlic"}]',
+            },
+        )
+
+    @patch('kitchines.suggestions._suggestion_chain')
+    @override_settings(GROQ_API_KEY='')
+    def test_suggestion_skips_hosted_model_without_api_key(self, chain_factory):
+        KitchenOrder.objects.create(
+            kitchen=self.kitchen,
+            customer_name='Alice',
+            item_name='Soup',
+            created_by=self.user,
+        )
+
+        suggestion = generate_order_suggestion('soup', self.user.pk, self.kitchen.pk)
+
+        self.assertIsNone(suggestion)
+        chain_factory.assert_not_called()
+
+    @patch('kitchines.suggestions._suggestion_chain')
+    @override_settings(GROQ_API_KEY='test-key')
+    def test_suggestion_skips_model_when_user_has_no_order_history(self, chain_factory):
+        suggestion = generate_order_suggestion('soup', self.user.pk, self.kitchen.pk)
+
+        self.assertIsNone(suggestion)
+        chain_factory.assert_not_called()
+
+    @patch('kitchines.suggestions._suggestion_chain')
+    @override_settings(GROQ_API_KEY='test-key')
+    def test_groq_error_logs_provider_message(self, chain_factory):
+        KitchenOrder.objects.create(
+            kitchen=self.kitchen,
+            customer_name='Alice',
+            item_name='Soup',
+            created_by=self.user,
+        )
+        error = RuntimeError('Error code: 400')
+        error.status_code = 400
+        error.body = {'error': {'message': 'The selected model is unavailable.'}}
+        chain_factory.return_value.invoke.side_effect = error
+
+        with self.assertLogs('kitchines.suggestions', level='ERROR') as logs:
+            suggestion = generate_order_suggestion('soup', self.user.pk, self.kitchen.pk)
+
+        self.assertIsNone(suggestion)
+        self.assertIn('The selected model is unavailable.', '\n'.join(logs.output))
